@@ -132,21 +132,33 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
 }
 
 /* Stage pieces */
-.stage .anchor { position: relative; width: min(420px, 92vw); margin: 0 auto; }
-.pack-img      { width: 100%; height: auto; display: block; }
+stage .anchor{
+  position: relative;
+  width: min(420px, 92vw);     /* stage width */
+  aspect-ratio: 10 / 7;        /* pack image ratio (≈1.4286) → stable height */
+  margin: 0 auto;
+  isolation: isolate;           /* z-index layers behave */
+}
+.pack-img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
 
-/* Stack lives centered, cards are absolute in it */
+/* ----- STACK: absolute in the same anchor, cards truly centered ----- */
 .stack{
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: auto;
   z-index: 20;
+  pointer-events: auto;
 }
 .stack .card{
   position: absolute;
-  width: 72%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);     /* perfect center baseline */
+  width: 72%;                            /* size of stack cards relative to stage */
   aspect-ratio: 5 / 7;
   border-radius: 12px;
   overflow: hidden;
@@ -155,16 +167,19 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
   cursor: pointer;
 }
 .stack .card img{
-  width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
 }
 
-/* Tray replaces the pack inside the same anchor */
+/* ----- TRAY: replaces the pack in the same anchor (3+2 centered) ----- */
 .tray{
   position: absolute;
   inset: 0;
+  z-index: 10;
   display: grid;
   place-items: center;
-  z-index: 10;
 }
 .tray-grid{
   display: grid;
@@ -172,7 +187,7 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
   column-gap: 10px;
   row-gap: 10px;
   width: 100%;
-  padding-inline: 10px;           /* keep off edges on mobile */
+  padding-inline: 10px;          /* keep off edges on mobile */
   max-width: 100%;
   justify-items: center;
 }
@@ -185,14 +200,28 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
   border: 1px solid #2a2a2a;
   background: #0d0d0d;
   padding: 0;
+  cursor: pointer;
 }
-.tray .card img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+.tray .card img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;              /* no squish */
+}
 
-/* Dim rest of tray while preview open */
-.tray.has-preview .card{ opacity: .35; filter: saturate(.8); pointer-events: none; }
-.tray.has-preview .card.is-active{ opacity: 1; filter: none; pointer-events: auto; z-index: 50; }
+/* Dim other cards when preview is open */
+.tray.has-preview .card{
+  opacity: .35;
+  filter: saturate(.8);
+  pointer-events: none;
+}
+.tray.has-preview .card.is-active{
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
+  z-index: 50;
+}
 
-/* In-stage overlay (sits on top of stack/tray, inside the anchor bounds) */
+/* ----- Overlay: inside the anchor, always fits within it ----- */
 .overlay{
   position: absolute;
   inset: 0;
@@ -201,22 +230,30 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
   z-index: 40;
 }
 .overlay-backdrop{
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(2px);
 }
 .overlay-card{
   position: relative;
   z-index: 42;
-  width: min(560px, 90%);
-  padding: 10px;
+  width: min(90%, 560px);
+  /* Keep the enlarged card visible inside the stage */
+  max-height: 90%;
+  padding: 8px;
   border-radius: 12px;
   background: #0b0b0b;
   border: 1px solid #2a2a2a;
+  display: grid;
 }
-.overlay-card img{ width: 100%; aspect-ratio: 5 / 7; object-fit: cover; }
+.overlay-card img{
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+}
 
-/* Keep CTA close to stage by default (you can tweak further if needed) */
+/* CTA close to stage (adjust if you want even tighter) */
 .actions{ margin-top: 8px; }
 @media (max-width: 600px){
   .actions{ margin-top: 4px; }

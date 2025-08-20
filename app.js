@@ -124,18 +124,23 @@ function renderStack(){
   stackEl.replaceChildren();
   stackEl.hidden = false;
   trayEl.hidden  = true;
-  packImg.hidden = true; // pack disappears while stack/tray is up
+  packImg.hidden = true;                 // ⬅️ hide the pack as soon as stack shows
 
   const items = last?.results || [];
-  // find first unrevealed
+  // first unrevealed
   let topIndex = -1;
   for (let i=0;i<items.length;i++){ if (!revealed.includes(i)) { topIndex = i; break; } }
 
   items.forEach((it, i) => {
-    if (revealed.includes(i)) return; // gone from stack
+    if (revealed.includes(i)) return;    // already moved to tray
     const card = el('div', 'card');
+
+    // slight depth offset downwards (AFTER center transform)
+    const depth = Math.min(((items.length - i - 1) * 3), 18);
+    card.style.transform = `translate(-50%, -50%) translateY(${depth}px)`; // ⬅️ stack offset
+    card.style.left = '50%';
+    card.style.top  = '50%';
     card.style.zIndex = 100 + (i === topIndex ? 10 : 0);
-    card.style.transform = `translate3d(0, ${Math.min(((items.length - i - 1) * 3), 18)}px, 0)`;
 
     const img = el('img');
     img.src = resolveImage(it);
@@ -145,9 +150,7 @@ function renderStack(){
     if (i === topIndex){
       card.style.cursor = 'pointer';
       card.addEventListener('click', () => {
-        // reveal this one
         revealed = revealed.concat(i);
-        // if all revealed, go to tray; else re-render stack
         if (revealed.length === items.length){
           phase = 'tray';
           renderTrayFromRevealed();
@@ -161,6 +164,10 @@ function renderStack(){
 
     stackEl.appendChild(card);
   });
+
+  // CTA hint
+  cta.textContent = 'Click top card';
+  cta.disabled = false;
 }
 
 // --- render: tray (3+2 layout) -----------------------------------------
@@ -170,24 +177,26 @@ function renderTrayFromRevealed(){
   trayEl.replaceChildren();
 
   const grid = el('div', 'tray-grid');
-  // revealed contains original indexes in reveal order; map to items
   const items = revealed.map(idx => ({ idx, it: last.results[idx] }));
 
   items.forEach((entry, pos) => {
     const { idx, it } = entry;
     const btn = el('button', 'card');
-    btn.dataset.pos = String(pos + 1); // 1..5 for layout
+    btn.dataset.pos = String(pos + 1);
     const img = el('img');
     img.src = resolveImage(it);
     img.alt = it.name || 'Card';
     btn.appendChild(img);
 
     btn.addEventListener('click', () => openPreview(idx, it, btn));
-
     grid.appendChild(btn);
   });
 
   trayEl.appendChild(grid);
+
+  // Update CTA now that we’re in tray
+  cta.textContent = 'Add to collection';
+  cta.disabled = false;
 }
 
 // --- preview overlay (in-stage) ----------------------------------------
@@ -231,12 +240,12 @@ function wireCTA(){
 
       // lightweight animation phases
       setTimeout(()=> { phase = 'spilling'; }, 250);
-      setTimeout(()=> {
-        phase = 'stack';
-        renderStack();           // show the stack
-        cta.disabled = false;
-        cta.textContent = 'Click top card';
-      }, 500);
+        setTimeout(()=> {
+          phase = 'stack';
+          renderStack();            // ⬅️ shows stack, hides pack
+          cta.disabled = false;
+          cta.textContent = 'Click top card';
+        }, 500);
 
       // refresh balance in background
       getInventory().then(i => { inv = i || inv; renderMeta(); }).catch(()=>{});
@@ -249,13 +258,14 @@ function wireCTA(){
         try{
           await getInventory().then(i => { inv = i || inv; renderMeta(); });
           // reset loop
-          setTimeout(()=>{
-            last = null; revealed = []; preview = null; phase = 'idle';
-            trayEl.hidden = true; stackEl.hidden = true; packImg.hidden = false;
-            cta.textContent = 'Open Pack';
-            cta.disabled = false;
-            wireCTA();
-          }, 350);
+            // inside the collect handler (phase === 'tray' && !preview)
+            setTimeout(()=>{
+              last = null; revealed = []; preview = null; phase = 'idle';
+              trayEl.hidden = true; stackEl.hidden = true; packImg.hidden = false;  // ⬅️ show pack again
+              cta.textContent = 'Open Pack';
+              cta.disabled = false;
+              wireCTA();
+            }, 350);
         } catch(e){
           showError(String(e.message || e));
           cta.textContent = 'Open Pack';
