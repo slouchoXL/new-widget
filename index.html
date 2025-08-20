@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Packs Widget</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" class="widget" aria-live="polite">
+    <div class="topbar">
+      <div class="meta">
+        <div class="balance" id="balance">Balance: —</div>
+        <div class="price"   id="price">Price: —</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="anchor">
+        <img class="pack-img" src="./assets/pack.png" alt="Pack" />
+        <div class="tray" id="tray" hidden></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="cta" class="btn">Open Pack</button>
+    </div>
+
+    <!-- overlay lives inside widget -->
+    <div id="overlay" class="overlay" hidden>
+      <div class="overlay-backdrop"></div>
+      <div class="overlay-card">
+        <img id="overlay-img" alt="" />
+      </div>
+    </div>
+
+    <div id="error" class="error" hidden></div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
