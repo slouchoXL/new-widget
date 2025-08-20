@@ -12,14 +12,20 @@
   </style>
 
   <script>
-    // Allow passing the API base via URL: ?api=https://backend-xxxx.onrender.com
-    // Define this BEFORE app.js so app.js can read it.
+    // Define the API base BEFORE app.js so app.js can read it.
     (function () {
       const params = new URLSearchParams(location.search);
-      const apiBase = params.get('api');
+      // Prefer ?api=...; otherwise default to your backend origin (NO /api here)
+      let apiBase = params.get('api') || 'https://backend-o9ot.onrender.com';
 
-      // Default to same-origin /api if none provided
-      window.__PACKS_API_BASE = apiBase || '/api';
+      // Normalize: remove trailing slashes and a trailing "/api" if provided.
+      apiBase = String(apiBase || '').trim()
+        .replace(/\/+$/,'')
+        .replace(/\/api$/i, '');
+
+      // Expose for app.js
+      window.__PACKS_API_BASE = apiBase;
+      // e.g. "https://backend-o9ot.onrender.com"
     })();
   </script>
 </head>
@@ -64,20 +70,14 @@
           document.documentElement.scrollHeight,
           document.body ? document.body.scrollHeight : 0
         );
-        // Send height to parent so it can size the iframe
         if (window.parent && window.parent !== window){
           window.parent.postMessage({ type: 'packs:height', height: h }, '*');
         }
       }
-
-      // Fire on load, resize, and DOM changes
       window.addEventListener('load', postHeight);
       window.addEventListener('resize', postHeight);
-
       const mo = new MutationObserver(() => postHeight());
       mo.observe(document.documentElement, { childList:true, subtree:true, attributes:true });
-
-      // initial ping
       postHeight();
     })();
   </script>

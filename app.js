@@ -1,18 +1,36 @@
 // Prefer ?api=https://... or window.__PACKS_API_BASE set in index.html.
 // Fall back to Vite env *when* the file is built by Vite (optional chaining).
+// --- API base -----------------------------------------------------------
+// Order of precedence: ?api= → window.__PACKS_API_BASE → VITE_API_BASE
 let BASE = '';
+try {
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('api')) {
+    BASE = qs.get('api');
+  } else if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
+    BASE = window.__PACKS_API_BASE;
+  } else if (typeof import.meta !== 'undefined' &&
+             import.meta.env && import.meta.env.VITE_API_BASE) {
+    BASE = import.meta.env.VITE_API_BASE;
+  }
+} catch {}
 
-if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
-  BASE = window.__PACKS_API_BASE;
-} else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) {
-  BASE = import.meta.env.VITE_API_BASE;
+BASE = String(BASE || '').trim();
+// remove trailing slashes
+BASE = BASE.replace(/\/+$/, '');
+// if someone passed https://host.tld/api, strip the /api (we add it ourselves)
+BASE = BASE.replace(/\/api$/i, '');
+
+// Ensure the path starts with /api exactly once
+function apiPath(p) {
+  const clean = String(p || '');
+  if (clean.startsWith('/api')) return clean;
+  return '/api' + (clean.startsWith('/') ? clean : `/${clean}`);
 }
 
-BASE = BASE.replace(/\/+$/, ''); // trim trailing slashes
-
-// --- API helpers --------------------------------------------------------
+// --- API helper ---------------------------------------------------------
 async function jfetch(path, options = {}) {
-  const url = `${BASE}${path}`;
+  const url = BASE + apiPath(path);
   const r = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
@@ -28,10 +46,11 @@ async function jfetch(path, options = {}) {
   return r.json();
 }
 
-async function listPacks()           { return jfetch('/api/packs'); }
-async function getInventory()        { return jfetch('/api/inventory'); }
+// Convenience wrappers (unchanged usage)
+async function listPacks()           { return jfetch('/packs'); }
+async function getInventory()        { return jfetch('/inventory'); }
 async function openPack(packId, key) {
-  return jfetch('/api/packs/open', {
+  return jfetch('/packs/open', {
     method: 'POST',
     body: JSON.stringify({ packId, idempotencyKey: key }),
   });
