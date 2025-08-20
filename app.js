@@ -29,7 +29,7 @@ function uuid4(){
 
 // ----- state / refs -----
 let packs = [];
-let inv   = { balance:{ COIN: 0 }, items: [] };
+let inv   = { balance:{ COIN: 999 }, items: [] };
 let opening = null; // { results:[...] }
 
 const balanceEl = $('#balance');

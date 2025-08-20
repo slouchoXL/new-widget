@@ -32,8 +32,8 @@ html,body{
   margin: 0 auto;
   padding: 12px;
   background: var(--card);
-  border: 1px solid #000;
-  border-radius: 12px;
+  /*border: 1px solid #000;
+  border-radius: 12px;*/
 }
 
 /* ---- Rarity tag on STACK cards ---- */
