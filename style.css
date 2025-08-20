@@ -130,3 +130,94 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
   .meta{ margin-bottom: 2px; }
   .actions{ margin-top: 2px; }
 }
+
+/* Stage pieces */
+.stage .anchor { position: relative; width: min(420px, 92vw); margin: 0 auto; }
+.pack-img      { width: 100%; height: auto; display: block; }
+
+/* Stack lives centered, cards are absolute in it */
+.stack{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  z-index: 20;
+}
+.stack .card{
+  position: absolute;
+  width: 72%;
+  aspect-ratio: 5 / 7;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #2a2a2a;
+  background: #0d0d0d;
+  cursor: pointer;
+}
+.stack .card img{
+  width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+}
+
+/* Tray replaces the pack inside the same anchor */
+.tray{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+.tray-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 10px;
+  row-gap: 10px;
+  width: 100%;
+  padding-inline: 10px;           /* keep off edges on mobile */
+  max-width: 100%;
+  justify-items: center;
+}
+.tray .card{
+  position: static;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #2a2a2a;
+  background: #0d0d0d;
+  padding: 0;
+}
+.tray .card img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Dim rest of tray while preview open */
+.tray.has-preview .card{ opacity: .35; filter: saturate(.8); pointer-events: none; }
+.tray.has-preview .card.is-active{ opacity: 1; filter: none; pointer-events: auto; z-index: 50; }
+
+/* In-stage overlay (sits on top of stack/tray, inside the anchor bounds) */
+.overlay{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 40;
+}
+.overlay-backdrop{
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+}
+.overlay-card{
+  position: relative;
+  z-index: 42;
+  width: min(560px, 90%);
+  padding: 10px;
+  border-radius: 12px;
+  background: #0b0b0b;
+  border: 1px solid #2a2a2a;
+}
+.overlay-card img{ width: 100%; aspect-ratio: 5 / 7; object-fit: cover; }
+
+/* Keep CTA close to stage by default (you can tweak further if needed) */
+.actions{ margin-top: 8px; }
+@media (max-width: 600px){
+  .actions{ margin-top: 4px; }
+}
