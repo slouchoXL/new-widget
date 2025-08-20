@@ -38,5 +38,38 @@
   </div>
 
   <script type="module" src="app.js"></script>
+  
+  <script>
+      // Allow passing the API base via URL: ?api=https://backend-xxxx.onrender.com
+      const params = new URLSearchParams(location.search);
+      const apiBase = params.get('api');
+      if (apiBase) window.__PACKS_API_BASE = apiBase;
+    </script>
+
+  
+  <script>
+    (function () {
+      function postHeight(){
+        const h = Math.max(
+          document.documentElement.scrollHeight,
+          document.body ? document.body.scrollHeight : 0
+        );
+        // Send height to parent so it can size the iframe
+        if (window.parent && window.parent !== window){
+          window.parent.postMessage({ type: 'packs:height', height: h }, '*');
+        }
+      }
+
+      // Fire on load, resize, and DOM changes
+      window.addEventListener('load', postHeight);
+      window.addEventListener('resize', postHeight);
+
+      const mo = new MutationObserver(() => postHeight());
+      mo.observe(document.documentElement, { childList:true, subtree:true, attributes:true });
+
+      // initial ping
+      postHeight();
+    })();
+  </script>
 </body>
 </html>
