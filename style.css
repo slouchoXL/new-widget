@@ -11,7 +11,7 @@
    --thumbW: calc((var(--packW) * var(--trayScale) - 2*var(--pad) - 2*var(--gapX)) / 3);
 
    /* stack card size (as % of stage); smaller by default */
-   --stackW: 40%;
+   --stackW: 60%;
  }
 
   /* typography/colors */
@@ -48,6 +48,7 @@ html,body{
 .stage{ display:grid; place-items:center; }
 /* The stage box the overlay must fit inside */
 .anchor{
+    outline: 1px dashed red;
   position: relative;
   width: calc(var(--packW) + 2*var(--pad));
   height: calc(var(--packW) * 1.4286); /* 2000/1400 ≈ 1.4286 */
