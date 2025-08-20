@@ -195,10 +195,10 @@ html,body{
 
 /* responsive suggestions */
 @media (max-width: 900px){
-  :root{ --packW: 340px; --gapX: 12px; --pad: 8px; --stackW: 60%; --trayScale: 0.95; }
+  :root{ --packW: 340px; --gapX: 12px; --pad: 8px; --stackW: 80%; --trayScale: 0.95; }
 }
 @media (max-width: 600px){
-  :root{ --packW: 240px; --gapX: 8px;  --pad: 10px; --stackW: 60%; --trayScale: 0.95; }
+  :root{ --packW: 300px; --gapX: 8px;  --pad: 10px; --stackW: 80%; --trayScale: 1.1; }
 }
 
 
