@@ -1,20 +1,19 @@
-const BASE = import.meta.env.VITE_API_BASE || '';
-export const listPacks = () => fetch(`${BASE}/api/packs`).then(r=>r.json());
-// ...same pattern for the other calls
-// Small helper: normalize rarity -> css class (common, rare, epic, legendary)
-export function rarityClass(r) {
-  return String(r || 'common').toLowerCase();
-}
+// Prefer ?api=https://... or window.__PACKS_API_BASE set in index.html.
+// Fall back to Vite env *when* the file is built by Vite (optional chaining).
+const BASE = (
+  window.__PACKS_API_BASE ||
+  (typeof import !== 'undefined' ? (import.meta?.env?.VITE_API_BASE || '') : '')
+).replace(/\/+$/, ''); // trim trailing slashes
 
-// Optional: simple fetch with consistent errors
+// --- API helpers --------------------------------------------------------
 async function jfetch(path, options = {}) {
-  const r = await fetch(`${BASE}${path}`, {
+  const url = `${BASE}${path}`;
+  const r = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
   });
   if (!r.ok) {
-    // Try to read a JSON error shape { error: "..."} first; fallback to status text
-    let msg = `${options.method || 'GET'} ${path} ${r.status}`;
+    let msg = `${options.method || 'GET'} ${url} ${r.status}`;
     try {
       const j = await r.json();
       if (j && j.error) msg = j.error;
@@ -24,18 +23,12 @@ async function jfetch(path, options = {}) {
   return r.json();
 }
 
-export async function listPacks() {
-  return jfetch('/api/packs');
-}
-
-export async function getInventory() {
-  return jfetch('/api/inventory');
-}
-
-export async function openPack(packId, idempotencyKey) {
+async function listPacks()           { return jfetch('/api/packs'); }
+async function getInventory()        { return jfetch('/api/inventory'); }
+async function openPack(packId, key) {
   return jfetch('/api/packs/open', {
     method: 'POST',
-    body: JSON.stringify({ packId, idempotencyKey }),
+    body: JSON.stringify({ packId, idempotencyKey: key }),
   });
 }
 
