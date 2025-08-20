@@ -19,7 +19,13 @@
 
 *{ box-sizing: border-box; }
 html,body{
-  margin:0; background:#000; color:var(--text);
+  height: 100%;
+  margin:0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background:#000;
+  color:var(--text);
   font-family:system-ui, -apple-system, Inter, Roboto, Arial, sans-serif;
 }
 
@@ -31,8 +37,8 @@ html,body{
   width: min(1200px, 96vw);
   margin: 0 auto;
   padding: 12px;
-  background: var(--card);
-  /*border: 1px solid #000;
+  /*background: var(--card);
+  border: 1px solid #000;
   border-radius: 12px;*/
 }
 
@@ -69,7 +75,7 @@ html,body{
 .stage{ display:grid; place-items:center; }
 /* The stage box the overlay must fit inside */
 .anchor{
-  outline: 1px dashed red;
+    /* outline: 1px dashed red;*/
   position: relative;
   width: calc(var(--packW) + 2*var(--pad));
   height: calc(var(--packW) * 1.4286); /* 2000/1400 ≈ 1.4286 */
