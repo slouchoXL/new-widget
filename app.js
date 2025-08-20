@@ -1,21 +1,24 @@
-// --- tiny helpers -------------------------------------------------------
-const qs = new URLSearchParams(location.search);
-const API = qs.get('api') || ''; // e.g. ?api=https://backend-xxxx.onrender.com
-
-const $ = (sel) => document.querySelector(sel);
-const el = (tag, cls) => Object.assign(document.createElement(tag), cls ? {className:cls} : {});
-
-function uuid4(){
-  if (crypto?.randomUUID) return crypto.randomUUID();
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16));
+const BASE = import.meta.env.VITE_API_BASE || '';
+export const listPacks = () => fetch(`${BASE}/api/packs`).then(r=>r.json());
+// ...same pattern for the other calls
+// Small helper: normalize rarity -> css class (common, rare, epic, legendary)
+export function rarityClass(r) {
+  return String(r || 'common').toLowerCase();
 }
 
-async function jfetch(path, opts = {}){
-  const r = await fetch(API + path, { headers:{'Content-Type':'application/json'}, ...opts });
-  if (!r.ok){
-    let msg = `${opts.method||'GET'} ${path} ${r.status}`;
-    try { const j = await r.json(); if (j?.error) msg = j.error; } catch {}
+// Optional: simple fetch with consistent errors
+async function jfetch(path, options = {}) {
+  const r = await fetch(`${BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  if (!r.ok) {
+    // Try to read a JSON error shape { error: "..."} first; fallback to status text
+    let msg = `${options.method || 'GET'} ${path} ${r.status}`;
+    try {
+      const j = await r.json();
+      if (j && j.error) msg = j.error;
+    } catch {}
     throw new Error(msg);
   }
   return r.json();
