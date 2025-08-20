@@ -8,7 +8,7 @@
   --thumbW: calc((var(--packW) - 2*var(--pad) - 2*var(--gapX)) / 3);
 
   /* stack card width as a % of the stage (tweak to taste) */
-  --stackW: 66%;
+  --stackW: 55%;
 
   /* typography/colors */
   --bg:#0a0a0a; --card:#121212; --text:#eaeaea; --muted:#9aa0a6; --btn:#3b82f6;
@@ -138,10 +138,10 @@ html,body{
 
 /* Responsive tightenings */
 @media (max-width: 900px){
-  :root{ --packW:340px; --gapX:12px; --pad:8px; --stackW:64%; }
+  :root{ --packW:340px; --gapX:12px; --pad:8px; --stackW:40%; }
 }
 @media (max-width: 600px){
-  :root{ --packW:240px; --gapX:8px; --pad:10px; --stackW:62%; }
+  :root{ --packW:240px; --gapX:8px; --pad:10px; --stackW:40%; }
   .meta{ margin-bottom:2px; }
   .actions{ margin-top:2px; }
 }
