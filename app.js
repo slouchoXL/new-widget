@@ -24,6 +24,21 @@ async function jfetch(path, options = {}) {
   return r.json();
 }
 
+export async function listPacks() {
+  return jfetch('/api/packs');
+}
+
+export async function getInventory() {
+  return jfetch('/api/inventory');
+}
+
+export async function openPack(packId, idempotencyKey) {
+  return jfetch('/api/packs/open', {
+    method: 'POST',
+    body: JSON.stringify({ packId, idempotencyKey }),
+  });
+}
+
 // --- state --------------------------------------------------------------
 let packs = [];
 let inv   = { balance:{ COIN: 0 }, items: [] };
