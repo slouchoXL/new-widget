@@ -34,9 +34,32 @@ html,body{
   margin: 0 auto;
   padding: 12px;
   background: var(--card);
-  border: 1px solid #222;
+  border: 1px solid #000;
   border-radius: 12px;
 }
+
+/* ---- Rarity tag on STACK cards ---- */
+.stack .tag{
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: #444; /* default */
+  text-transform: capitalize;
+  pointer-events: none;
+}
+
+/* Color by rarity */
+.tag.common    { background:#64748b; }
+.tag.rare      { background:#3b82f6; }
+.tag.epic      { background:#a855f7; }
+.tag.legendary { background:#f59e0b; }
 
 /* meta tight ABOVE the pack */
 .meta{

@@ -50,6 +50,15 @@ if (!stackEl) {
 }
 
 // ----- helpers -----
+
+function rarityClass(r){
+  return String(r || 'common').toLowerCase();
+}
+function prettyRarity(r){
+  r = rarityClass(r);
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+
 function showError(msg){
   errorEl.textContent = msg;
   errorEl.hidden = false;
@@ -96,10 +105,20 @@ function showStack(items){
   items.forEach((it, i) => {
     const btn = el('button', 'stack-card');
     const img = el('img', 'card-img');
-    img.src = cardFrontSrc(it);
+    img.src = cardFrontSrc(it);             // your existing helper
     img.alt = it.name || 'Card';
+
+    // NEW: rarity tag
+    const tag = el('div', `tag ${rarityClass(it.rarity)}`);
+    tag.textContent = prettyRarity(it.rarity);
+
+    // order doesn’t matter visually (tag is absolutely positioned)
     btn.appendChild(img);
+    btn.appendChild(tag);
+
+    // keep your existing click logic
     btn.addEventListener('click', () => onRevealTop(btn));
+
     stackEl.appendChild(btn);
   });
 }
