@@ -1,9 +1,14 @@
 // Prefer ?api=https://... or window.__PACKS_API_BASE set in index.html.
 // Fall back to Vite env *when* the file is built by Vite (optional chaining).
-const BASE = (
-  window.__PACKS_API_BASE ||
-  (typeof import !== 'undefined' ? (import.meta?.env?.VITE_API_BASE || '') : '')
-).replace(/\/+$/, ''); // trim trailing slashes
+let BASE = '';
+
+if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
+  BASE = window.__PACKS_API_BASE;
+} else if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) {
+  BASE = import.meta.env.VITE_API_BASE;
+}
+
+BASE = BASE.replace(/\/+$/, ''); // trim trailing slashes
 
 // --- API helpers --------------------------------------------------------
 async function jfetch(path, options = {}) {
