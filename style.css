@@ -122,7 +122,7 @@ html,body{ margin:0; background:#000; color:var(--text); font-family:system-ui, 
 }
 @media (max-width: 600px){
   :root{
-    --packW: 240px;    /* you said this felt right */
+    --packW: 400px;    /* you said this felt right */
     --thumbW: 130px;
     --gapX: 8px;       /* row gap == col gap */
     --pad: 10px;       /* keeps tray off edges */
