@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Packs Widget</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* keep the iframe/page from side-scrolling */
+    html, body { overflow-x: hidden; }
+  </style>
+
+  <script>
+    // Allow passing the API base via URL: ?api=https://backend-xxxx.onrender.com
+    // Define this BEFORE app.js so app.js can read it.
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const apiBase = params.get('api');
+
+      // Default to same-origin /api if none provided
+      window.__PACKS_API_BASE = apiBase || '/api';
+    })();
+  </script>
 </head>
 <body>
   <div id="app" class="widget" aria-live="polite">
@@ -37,16 +54,9 @@
     <div id="error" class="error" hidden></div>
   </div>
 
+  <!-- Load app AFTER we’ve set window.__PACKS_API_BASE -->
   <script type="module" src="app.js"></script>
-  
-  <script>
-      // Allow passing the API base via URL: ?api=https://backend-xxxx.onrender.com
-      const params = new URLSearchParams(location.search);
-      const apiBase = params.get('api');
-      if (apiBase) window.__PACKS_API_BASE = apiBase;
-    </script>
 
-  
   <script>
     (function () {
       function postHeight(){
