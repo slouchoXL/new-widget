@@ -105,17 +105,14 @@ function showStack(items){
 }
 
 function onRevealTop(btn){
-  // Only remove if it's the top-most (last child)
   if (btn !== stackEl.lastElementChild) return;
   stackEl.removeChild(btn);
 
-  // When no cards left, switch to tray
   if (!stackEl.children.length) {
     showTray(opening.results);
   }
 }
 
-// ----- TRAY render -----
 function showTray(items){
   stackEl.hidden = true;
   trayEl.hidden  = false;
@@ -123,17 +120,46 @@ function showTray(items){
   trayEl.replaceChildren();
 
   items.forEach((it, idx) => {
-    const pos = idx + 1; // 1..5 layout mapping with CSS
+    const pos = idx + 1;
     const btn = el('button', 'tray-card');
     btn.setAttribute('data-pos', String(pos));
     const img = el('img');
-    img.src = cardFrontSrc(it);
+    img.src = '/assets/card-front.png';    // force your front PNG
     img.alt = it.name || 'Card';
     btn.appendChild(img);
-
     btn.addEventListener('click', () => openOverlay(btn, img.src));
     trayEl.appendChild(btn);
   });
+
+  // NOW bring back the CTA as "Add to collection"
+  cta.textContent = 'Add to collection';
+  cta.hidden = false;
+  cta.disabled = false;
+  cta.onclick = onCollectClick;  // small helper below
+}
+
+async function onCollectClick(){
+  if (!overlay.hidden) return;   // don't allow while preview is open
+  cta.disabled = true;
+  cta.textContent = 'Adding…';
+  try{
+    // (no-op server update here; just reset UI)
+    opening = null;
+    stackEl.hidden = true;
+    trayEl.hidden  = true;
+    packImg.hidden = false;
+
+    cta.textContent = 'Open Pack';
+    cta.disabled = false;
+    cta.onclick = null;
+    cta.addEventListener('click', onOpenClick, { once:true });
+  } catch(e){
+    showError(String(e.message || e));
+    cta.textContent = 'Open Pack';
+    cta.disabled = false;
+    cta.onclick = null;
+    cta.addEventListener('click', onOpenClick, { once:true });
+  }
 }
 
 // ----- OVERLAY -----
@@ -170,11 +196,13 @@ async function onOpenClick(){
     const pack = packs[0];
     if (!pack) return;
 
-    // phase: open → disable CTA and hide pack immediately
+    // Hide CTA while revealing
+    cta.hidden = true;
     cta.disabled = true;
-    cta.textContent = 'Opening…';
+
+    // Hide pack + tray before showing stack
     packImg.hidden = true;
-    trayEl.hidden  = true;     // ensure hidden if previous run
+    trayEl.hidden  = true;
 
     const res = await jfetch('/api/packs/open', {
       method: 'POST',
@@ -183,53 +211,20 @@ async function onOpenClick(){
 
     opening = { ...res, results: padToFive(res.results || []) };
 
-    // update balance in background (not blocking)
     try{ inv = (await jfetch('/api/inventory')) || inv; renderMeta(); }catch{}
 
-    // show the stack in place of the pack
+    // show stack
     showStack(opening.results);
 
-    // switch CTA to “Click top card” while revealing
-    cta.textContent = 'Click top card';
-    cta.disabled = false;
+    // remove any “Click top card” text logic entirely
+    // CTA stays hidden until tray is shown
 
-    // once tray is visible, flip CTA to “Add to collection”
-    const observer = new MutationObserver(() => {
-      if (!stackEl.hidden && stackEl.children.length) return; // still revealing
-      if (!trayEl.hidden) {
-        cta.textContent = 'Add to collection';
-        observer.disconnect();
-      }
-    });
-    observer.observe(anchor, { childList:true, subtree:true, attributes:true });
-
-    // wire collection once we reach tray
-    cta.onclick = async ()=>{
-      if (!trayEl.hidden && overlay.hidden){ // no preview open
-        cta.disabled = true;
-        cta.textContent = 'Adding…';
-        try{
-          // in your current mock, nothing to do server-side; just reset UI
-          opening = null;
-          stackEl.hidden = true;
-          trayEl.hidden  = true;
-          packImg.hidden = false;  // bring pack back
-          cta.textContent = 'Open Pack';
-          cta.disabled = false;
-          cta.addEventListener('click', onOpenClick, { once:true });
-        } catch(e){
-          showError(String(e.message || e));
-          cta.textContent = 'Open Pack';
-          cta.disabled = false;
-          cta.addEventListener('click', onOpenClick, { once:true });
-        }
-      }
-    };
-
+    // re-arm CTA **after** we reach tray inside showTray()
   } catch(e){
     showError(String(e.message || e));
-    cta.textContent = 'Open Pack';
+    cta.hidden = false;
     cta.disabled = false;
+    cta.textContent = 'Open Pack';
     cta.addEventListener('click', onOpenClick, { once:true });
   }
 }

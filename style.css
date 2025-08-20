@@ -4,11 +4,15 @@
   --gapX: 16px;          /* tray column gap AND row gap */
   --pad:  10px;          /* side padding inside stage (safety on small) */
 
-  /* derived: 3 columns that fit within the stage width */
-  --thumbW: calc((var(--packW) - 2*var(--pad) - 2*var(--gapX)) / 3);
+  /* NEW: scale the tray grid down relative to the stage */
+   --trayScale: 0.82;       /* 0.82 means the 3x2 tray uses 82% of stage width */
 
-  /* stack card width as a % of the stage (tweak to taste) */
-  --stackW: 40%;
+   /* derived (fits 3 columns + 2 gaps inside the scaled width) */
+   --thumbW: calc((var(--packW) * var(--trayScale) - 2*var(--pad) - 2*var(--gapX)) / 3);
+
+   /* stack card size (as % of stage); smaller by default */
+   --stackW: 40%;
+ }
 
   /* typography/colors */
   --bg:#0a0a0a; --card:#121212; --text:#eaeaea; --muted:#9aa0a6; --btn:#3b82f6;
@@ -25,7 +29,8 @@ html,body{
   display:grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
-  width: min(1060px, 96vw);
+  width: min(1500px, 96vw);
+  max-height: 700px;
   margin: 0 auto;
   padding: 12px;
   background: var(--card);
@@ -71,11 +76,11 @@ html,body{
 }
 #stack[hidden]{ display:none; }
 #stack .stack-card{
-  position: absolute; left:50%; top:50%; transform: translate(-50%,-50%);
-  width: var(--stackW);           /* relative to stage width */
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width: var(--stackW);                /* smaller by default now */
   aspect-ratio: 5 / 7;
-  border-radius: 12px; overflow: hidden;
-  border: 1px solid #2a2a2a; background:#0d0d0d; cursor:pointer;
+  border-radius:12px; overflow:hidden;
+  border:1px solid #2a2a2a; background:#0d0d0d; cursor:pointer;
 }
 #stack .stack-card img{
   width:100%; height:100%; object-fit:cover; pointer-events:none;
@@ -86,7 +91,7 @@ html,body{
   position: absolute; inset: 0; z-index: 10;
   display:grid; place-items:center;
   grid-template-columns: repeat(3, var(--thumbW));
-  grid-auto-rows: calc(var(--thumbW) * 1.4); /* 5:7 ratio */
+  grid-auto-rows: calc(var(--thumbW) * 1.4);
   gap: var(--gapX);
   justify-content:center; align-content:center;
 }
@@ -113,21 +118,28 @@ html,body{
 #tray.has-preview .tray-card.is-active{ opacity:1; filter:none; pointer-events:auto; z-index:50; }
 
 /* ----- OVERLAY (enlarged card stays inside the stage) ----- */
-.overlay{
-  position:absolute; inset:0; display:grid; place-items:center; z-index:40;
-}
+/* the overlay fills the stage, but the card is capped by stage size */
+.overlay{ position:absolute; inset:0; display:grid; place-items:center; z-index:40; }
 .overlay[hidden]{ display:none; }
-.overlay-backdrop{
-  position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter: blur(2px);
-}
+.overlay-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+
+/* Fit within stage padding and height; never “massive” or cut off */
 .overlay-card{
   position:relative; z-index:42;
-  width: min(90%, var(--packW));
-  max-height: 90%;
-  border:1px solid #2a2a2a; background:#0b0b0b;
-  border-radius:12px; padding:8px; display:grid;
+  max-width: calc(var(--packW) - 2*var(--pad));
+  width: min(88%, 520px);
+  max-height: calc(100% - 2*12px);
+  padding: 8px;
+  border-radius: 12px;
+  background:#0b0b0b;
+  border:1px solid #2a2a2a;
+  display:grid;
 }
-.overlay-card img{ width:100%; aspect-ratio:5 / 7; object-fit:cover; }
+.overlay-card img{
+  width:100%;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+}
 
 /* error toast */
 .error[hidden]{ display:none; }
@@ -136,12 +148,10 @@ html,body{
   border:1px solid #4a1d1d; background:#2a1111; color:#ffb4b4; text-align:center;
 }
 
-/* Responsive tightenings */
+/* responsive suggestions */
 @media (max-width: 900px){
-  :root{ --packW:340px; --gapX:12px; --pad:8px; --stackW:40%; }
+  :root{ --packW: 340px; --gapX: 12px; --pad: 8px; --stackW: 36%; --trayScale: 0.82; }
 }
 @media (max-width: 600px){
-  :root{ --packW:240px; --gapX:8px; --pad:10px; --stackW:40%; }
-  .meta{ margin-bottom:2px; }
-  .actions{ margin-top:2px; }
+  :root{ --packW: 240px; --gapX: 8px;  --pad: 10px; --stackW: 32%; --trayScale: 0.84; }
 }
