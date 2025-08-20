@@ -5,14 +5,13 @@
   --pad:  10px;          /* side padding inside stage (safety on small) */
 
   /* NEW: scale the tray grid down relative to the stage */
-   --trayScale: 0.82;       /* 0.82 means the 3x2 tray uses 82% of stage width */
+  --trayScale: 0.82;     /* 0.82 means the 3x2 tray uses 82% of stage width */
 
-   /* derived (fits 3 columns + 2 gaps inside the scaled width) */
-   --thumbW: calc((var(--packW) * var(--trayScale) - 2*var(--pad) - 2*var(--gapX)) / 3);
+  /* derived (fits 3 columns + 2 gaps inside the scaled width) */
+  --thumbW: calc((var(--packW) * var(--trayScale) - 2*var(--pad) - 2*var(--gapX)) / 3);
 
-   /* stack card size (as % of stage); smaller by default */
-   --stackW: 60%;
- }
+  /* stack card size (as % of stage); smaller by default */
+  --stackW: 60%;
 
   /* typography/colors */
   --bg:#0a0a0a; --card:#121212; --text:#eaeaea; --muted:#9aa0a6; --btn:#3b82f6;
@@ -30,7 +29,6 @@ html,body{
   grid-template-rows: auto 1fr auto;
   gap: 8px;
   width: min(1200px, 96vw);
-  max-height: 700px;
   margin: 0 auto;
   padding: 12px;
   background: var(--card);
@@ -71,7 +69,7 @@ html,body{
 .stage{ display:grid; place-items:center; }
 /* The stage box the overlay must fit inside */
 .anchor{
-    outline: 1px dashed red;
+  outline: 1px dashed red;
   position: relative;
   width: calc(var(--packW) + 2*var(--pad));
   height: calc(var(--packW) * 1.4286); /* 2000/1400 ≈ 1.4286 */
@@ -142,7 +140,6 @@ html,body{
 #tray.has-preview .tray-card{ opacity:.35; filter:saturate(.8); pointer-events:none; }
 #tray.has-preview .tray-card.is-active{ opacity:1; filter:none; pointer-events:auto; z-index:50; }
 
-/* ----- OVERLAY (enlarged card stays inside the stage) ----- */
 /* the overlay fills the stage, but the card is capped by stage size */
 .overlay{
   position: absolute;
@@ -159,7 +156,7 @@ html,body{
   backdrop-filter: blur(2px);
 }
 
-* Card container stays within the stage */
+/* Card container stays within the stage */
 .overlay-card{
   position: relative;
   z-index: 51;
@@ -198,8 +195,8 @@ html,body{
 
 /* responsive suggestions */
 @media (max-width: 900px){
-  :root{ --packW: 340px; --gapX: 12px; --pad: 8px; --stackW: 36%; --trayScale: 0.82; }
+  :root{ --packW: 340px; --gapX: 12px; --pad: 8px; --stackW: 60%; --trayScale: 0.95; }
 }
 @media (max-width: 600px){
-  :root{ --packW: 240px; --gapX: 8px;  --pad: 10px; --stackW: 32%; --trayScale: 0.84; }
+  :root{ --packW: 240px; --gapX: 8px;  --pad: 10px; --stackW: 60%; --trayScale: 0.95; }
 }
