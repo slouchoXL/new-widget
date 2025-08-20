@@ -248,63 +248,6 @@ async function onOpenClick(){
   }
 }
 
-// ===== DEV TOOLS (front-end only; no persistence) =====
-(function setupDevTools() {
-  // Enable with ?debug=1 OR once via localStorage
-  const urlDebug  = /\bdebug=1\b/.test(location.search);
-  const savedDebug = localStorage.getItem('packs_debug') === '1';
-  const DEBUG = urlDebug || savedDebug;
 
-  if (urlDebug) localStorage.setItem('packs_debug', '1');
-
-  if (!DEBUG) return;
-
-  const widget = document.querySelector('.widget');
-  if (!widget) return;
-
-  const panel = document.createElement('div');
-  panel.className = 'dev-tools';
-  panel.innerHTML = `
-    <button type="button" data-act="add100">+100</button>
-    <button type="button" data-act="add1000">+1000</button>
-    <button type="button" data-act="max">Max</button>
-    <button type="button" data-act="zero">Zero</button>
-    <button type="button" data-act="off" title="Hide dev tools">×</button>
-  `;
-  widget.appendChild(panel);
-
-  function refresh() {
-    // Just refresh the UI with the current in-memory balance
-    renderMeta();
-  }
-
-  panel.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const act = btn.dataset.act || '';
-    inv.balance = inv.balance || {};
-    inv.balance.COIN = Number(inv.balance.COIN || 0);
-
-    if (act === 'add100')   inv.balance.COIN += 100;
-    if (act === 'add1000')  inv.balance.COIN += 1000;
-    if (act === 'max')      inv.balance.COIN  = 999999;
-    if (act === 'zero')     inv.balance.COIN  = 0;
-    if (act === 'off') {
-      localStorage.removeItem('packs_debug');
-      panel.remove();
-      return;
-    }
-    refresh();
-  });
-
-  // (optional) keyboard shortcuts while debug is on
-  window.addEventListener('keydown', (e) => {
-    if (!e.altKey) return;
-    inv.balance = inv.balance || {};
-    inv.balance.COIN = Number(inv.balance.COIN || 0);
-    if (e.key === '=') { inv.balance.COIN += 100; renderMeta(); }   // Alt+= : +100
-    if (e.key === '-') { inv.balance.COIN = Math.max(0, inv.balance.COIN - 100); renderMeta(); } // Alt-- : -100
-  });
-})();
 
 init();

@@ -201,24 +201,4 @@ html,body{
   :root{ --packW: 240px; --gapX: 8px;  --pad: 10px; --stackW: 60%; --trayScale: 0.95; }
 }
 
-/* --- DEV ONLY: little floating controls inside the widget --- */
-.dev-tools {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: flex;
-  gap: 6px;
-  z-index: 9999;
-}
-.dev-tools button {
-  appearance: none;
-  border: 1px solid #2a2a2a;
-  background: #1b1b1b;
-  color: #eee;
-  font-size: 12px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  opacity: 0.85;
-}
-.dev-tools button:hover { opacity: 1; }
+
