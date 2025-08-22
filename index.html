@@ -16,7 +16,7 @@
 
   <!-- Supabase project config: set URL & anon key on window -->
   <script>
-    // TODO: these are safe to expose on the client
+    // These are safe to expose on the client.
     window.__SUPABASE_URL = 'https://srdwkfjterotzjwzoauj.supabase.co';
     window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZHdrZmp0ZXJvdHpqd3pvYXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjU5NTksImV4cCI6MjA3MTQ0MTk1OX0.c0mJbQsfJMmqLiulXdZfWscd7J507buzRXkd700ymAQ';
   </script>
@@ -45,17 +45,12 @@
     }
   </script>
 
-  <!-- Handle magic-link returns (hash with access_token), then clean URL -->
+  <!-- If we returned from a magic link, just clean the hash (v2 needs no parsing here) -->
   <script>
-    (async function () {
-      try {
-        if (window.supa && location.hash.includes('access_token')) {
-          await window.supa.auth.getSessionFromUrl({ storeSession: true });
-          // strip the hash so we don’t keep reprocessing it
-          history.replaceState({}, '', location.pathname + location.search);
-        }
-      } catch (e) {
-        console.warn('[supabase] getSessionFromUrl failed:', e);
+    (function () {
+      if (/#(access_token|refresh_token|type)=/i.test(location.hash)) {
+        // Session is handled internally by supabase-js v2; we simply tidy the URL
+        history.replaceState({}, '', location.pathname + location.search);
       }
     })();
   </script>

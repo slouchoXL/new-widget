@@ -252,47 +252,41 @@ function closeOverlay(){
 overlay.addEventListener('click', closeOverlay);
 
 // ===== init / flow =====
-async function requireSignedInOrPrompt() {
-  if (!supa) return false;
-  const { data: { session } } = await supa.auth.getSession();
-  if (session?.user) return true;
 
-  // show a simple email link prompt
-  cta.textContent = 'Sign in to open packs';
-  cta.hidden = false;
-  cta.disabled = false;
-  cta.onclick = async () => {
-    const email = prompt('Enter your email to sign in');
-    if (!email) return;
-    const { error } = await supa.auth.signInWithOtp({ email });
-    if (error) return showError(error.message || 'Sign-in failed');
-    alert('Check your email for the magic link, then return here.');
-  };
-  return false;
-}
+// (Optional) require sign-in to open packs:
+// async function requireSignedInOrPrompt() {
+//   if (!supa) return false;
+//   const { data: { session } } = await supa.auth.getSession();
+//   if (session?.user) return true;
+//   cta.textContent = 'Sign in to open packs';
+//   cta.hidden = false;
+//   cta.disabled = false;
+//   cta.onclick = async () => {
+//     const email = prompt('Enter your email to sign in');
+//     if (!email) return;
+//     const { error } = await supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: `${location.origin}${location.pathname}` } });
+//     if (error) return showError(error.message || 'Sign-in failed');
+//     alert('Check your email for the magic link, then return here.');
+//   };
+//   return false;
+// }
 
-// Refresh UI if auth state changes after load
-// Refresh UI if auth state changes after load (no page reloads)
+// Live-reload balance/meta on auth changes without creating loops
 if (supa?.auth) {
-  const { data: { subscription } } = supa.auth.onAuthStateChange(async (event, session) => {
-    // Only act on actual sign-in/sign-out; ignore token refreshes etc.
+  supa.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session?.user) {
-      // Upgrade PLAYER_ID to the real user id and refresh visible meta
       await maybeUpgradePlayerIdToUser();
       try {
         const fresh = await jfetch('/api/inventory');
         inv = normalizeInventory(fresh);
         renderMeta();
       } catch {}
-      // CTA stays as-is; user can now open packs with their real account
     } else if (event === 'SIGNED_OUT') {
-      // Fall back to anon id (keep whatever was in localStorage)
       let anon = localStorage.getItem(PLAYER_ID_KEY);
       if (!anon) {
         anon = makeUuid();
         localStorage.setItem(PLAYER_ID_KEY, anon);
       }
-      // Update the in-memory PLAYER_ID so future calls use anon again
       PLAYER_ID = anon;
       try {
         const fresh = await jfetch('/api/inventory');
@@ -301,8 +295,8 @@ if (supa?.auth) {
       } catch {}
     }
   });
-  // (optional) store `subscription` if you plan to unsubscribe later
 }
+
 async function init(){
   try{
     const packsResp = await jfetch('/api/packs'); // public
