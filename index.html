@@ -31,6 +31,44 @@
     })();
   </script>
 
+  <div id="auth">
+    <input type="email" id="emailInput" placeholder="Enter email" />
+    <button id="loginBtn">Send Magic Link</button>
+    <button id="logoutBtn" hidden>Log out</button>
+  </div>
+
+  <script>
+    const emailInput = document.getElementById('emailInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    loginBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) return alert('Enter your email');
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) alert(error.message);
+      else alert('Check your email for the magic link!');
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      alert('Logged out');
+      loginBtn.hidden = false;
+      logoutBtn.hidden = true;
+    });
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[auth event]', event, session);
+      if (session?.user) {
+        loginBtn.hidden = true;
+        logoutBtn.hidden = false;
+      } else {
+        loginBtn.hidden = false;
+        logoutBtn.hidden = true;
+      }
+    });
+  </script>
+  
   <!-- Your app (module so we can use top-level await) -->
   <script type="module" src="app.js"></script>
 </head>
