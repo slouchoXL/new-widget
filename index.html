@@ -4,75 +4,93 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Packs Widget</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 
   <style>
+    /* keep the iframe/page from side-scrolling */
     html, body { overflow-x: hidden; }
   </style>
 
-  <!-- Supabase SDK -->
+  <!-- Supabase SDK (must load before we create a client) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- Supabase project config -->
+  <!-- Supabase project config: set URL & anon key on window -->
   <script>
     window.__SUPABASE_URL = 'https://srdwkfjterotzjwzoauj.supabase.co';
     window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZHdrZmp0ZXJvdHpqd3pvYXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjU5NTksImV4cCI6MjA3MTQ0MTk1OX0.c0mJbQsfJMmqLiulXdZfWscd7J507buzRXkd700ymAQ';
   </script>
 
-  <!-- Backend base (define BEFORE app.js) -->
+  <!-- Backend base (define BEFORE app.js so app.js can read it) -->
   <script>
     (function () {
       const params = new URLSearchParams(location.search);
       let apiBase = params.get('api') || 'https://backend-o9ot.onrender.com';
       apiBase = String(apiBase || '').trim()
-        .replace(/\/+$/,'')
+        .replace(/\/+$/, '')
         .replace(/\/api$/i, '');
       window.__PACKS_API_BASE = apiBase; // e.g. "https://backend-o9ot.onrender.com"
     })();
   </script>
 
-  <div id="auth">
+  <!-- Create ONE global Supabase client everyone can reuse -->
+  <script>
+    if (!window.supabase) {
+      console.error('Supabase CDN failed to load');
+    } else {
+      window.supa = window.supabase.createClient(
+        window.__SUPABASE_URL,
+        window.__SUPABASE_ANON_KEY
+      );
+    }
+  </script>
+</head>
+<body>
+  <!-- Simple auth UI (must be in BODY, after client is created) -->
+  <div id="auth" style="margin: 12px 12px 0; display:flex; gap:8px; align-items:center;">
     <input type="email" id="emailInput" placeholder="Enter email" />
     <button id="loginBtn">Send Magic Link</button>
     <button id="logoutBtn" hidden>Log out</button>
   </div>
 
   <script>
-    const emailInput = document.getElementById('emailInput');
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
+    (function () {
+      const emailInput = document.getElementById('emailInput');
+      const loginBtn   = document.getElementById('loginBtn');
+      const logoutBtn  = document.getElementById('logoutBtn');
 
-    loginBtn.addEventListener('click', async () => {
-      const email = emailInput.value.trim();
-      if (!email) return alert('Enter your email');
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) alert(error.message);
-      else alert('Check your email for the magic link!');
-    });
+      loginBtn.addEventListener('click', async () => {
+        const email = (emailInput.value || '').trim();
+        if (!email) return alert('Enter your email');
+        if (!window.supa?.auth) return alert('Auth not initialized');
+        const { error } = await window.supa.auth.signInWithOtp({ email });
+        if (error) alert(error.message);
+        else alert('Check your email for the magic link!');
+      });
 
-    logoutBtn.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      alert('Logged out');
-      loginBtn.hidden = false;
-      logoutBtn.hidden = true;
-    });
+      logoutBtn.addEventListener('click', async () => {
+        if (!window.supa?.auth) return;
+        await window.supa.auth.signOut();
+        alert('Logged out');
+      });
 
-    supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[auth event]', event, session);
-      if (session?.user) {
-        loginBtn.hidden = true;
-        logoutBtn.hidden = false;
-      } else {
-        loginBtn.hidden = false;
-        logoutBtn.hidden = true;
+      if (window.supa?.auth) {
+        window.supa.auth.onAuthStateChange((event, session) => {
+          console.log('[auth event]', event, session);
+          const signedIn = !!session?.user;
+          loginBtn.hidden  = signedIn;
+          logoutBtn.hidden = !signedIn;
+        });
+        // Initialize visibility on first load
+        window.supa.auth.getSession().then(({ data: { session } }) => {
+          const signedIn = !!session?.user;
+          loginBtn.hidden  = signedIn;
+          logoutBtn.hidden = !signedIn;
+        });
       }
-    });
+    })();
   </script>
-  
-  <!-- Your app (module so we can use top-level await) -->
-  <script type="module" src="app.js"></script>
-</head>
-<body>
+
+  <!-- Widget UI -->
   <div id="app" class="widget" aria-live="polite">
     <div class="topbar">
       <div class="meta">
@@ -103,6 +121,9 @@
 
     <div id="error" class="error" hidden></div>
   </div>
+
+  <!-- Your app (module so we can use top-level await); after client + auth UI -->
+  <script type="module" src="app.js"></script>
 
   <!-- Resize notifier for parent iframe (optional) -->
   <script>
