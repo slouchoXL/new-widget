@@ -46,11 +46,26 @@
   </script>
 
   <!-- If we returned from a magic link, just clean the hash (v2 needs no parsing here) -->
+  <!-- Handle magic-link returns (hash with access_token), then clean URL -->
   <script>
-    (function () {
-      if (/#(access_token|refresh_token|type)=/i.test(location.hash)) {
-        // Session is handled internally by supabase-js v2; we simply tidy the URL
-        history.replaceState({}, '', location.pathname + location.search);
+    (async function () {
+      try {
+        if (window.supa && location.hash && location.hash.includes('access_token')) {
+          const params = new URLSearchParams(location.hash.slice(1)); // strip #
+          const access_token  = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+
+          if (access_token && refresh_token) {
+            // v2: set the session explicitly
+            const { data, error } = await window.supa.auth.setSession({ access_token, refresh_token });
+            if (error) console.warn('[supabase] setSession error:', error);
+          }
+
+          // Strip the hash so we don’t keep reprocessing it
+          history.replaceState({}, '', location.pathname + location.search);
+        }
+      } catch (e) {
+        console.warn('[supabase] magic-link processing failed:', e);
       }
     })();
   </script>
@@ -65,7 +80,6 @@
 
   <script>
     (function () {
-      // Guard in case this block is ever included twice
       if (window.__AUTH_WIRED__) return;
       window.__AUTH_WIRED__ = true;
 
@@ -84,8 +98,9 @@
         if (!email) return alert('Enter your email');
         if (!window.supa?.auth) return alert('Auth not initialized');
 
-        // Ensure the magic link redirects right back to this page
-        const emailRedirectTo = `${location.origin}${location.pathname}`;
+        // 👇 Force redirect back to the *same tab + URL* user is already on
+        const emailRedirectTo = location.href;
+
         const { error } = await window.supa.auth.signInWithOtp({
           email,
           options: { emailRedirectTo }
@@ -102,7 +117,6 @@
       });
 
       if (window.supa?.auth) {
-        // Initial state + reactive updates
         window.supa.auth.getSession().then(({ data: { session } }) => updateButtons(session));
         window.supa.auth.onAuthStateChange((_event, session) => updateButtons(session));
       }
