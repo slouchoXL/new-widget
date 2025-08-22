@@ -1,14 +1,3 @@
-// ===== Stable anon identity FIRST (so jfetch can safely read it) =====
-const PLAYER_ID_KEY = 'packs:playerId';
-let PLAYER_ID = localStorage.getItem(PLAYER_ID_KEY);
-if (!PLAYER_ID) {
-  PLAYER_ID = (crypto.randomUUID && crypto.randomUUID()) ||
-    ([1e7]+-1e3+-4e3+-8e3+-1e11)
-      .replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16));
-  localStorage.setItem(PLAYER_ID_KEY, PLAYER_ID);
-}
-
 // ===== API base detection =====
 let BASE = '';
 if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
@@ -16,17 +5,72 @@ if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
 }
 BASE = BASE.replace(/\/+$/, ''); // trim trailing slashes
 
+// ===== Supabase client (CDN) ===========================================
+if (!window.supabase) {
+  console.error('[supabase] CDN script missing. Add it before app.js:\n' +
+    '<script src="https://unpkg.com/@supabase/supabase-js@2"></script>');
+}
+const SUPABASE_URL = window.__SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY || '';
+const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+// ===== player id (anon fallback preserved for testing) =================
+const PLAYER_ID_KEY = 'packs:playerId';
+function makeUuid(){
+  return (crypto.randomUUID && crypto.randomUUID()) ||
+    ([1e7]+-1e3+-4e3+-8e3+-1e11)
+      .replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16));
+}
+
+let PLAYER_ID = localStorage.getItem(PLAYER_ID_KEY);
+if (!PLAYER_ID) {
+  PLAYER_ID = makeUuid();
+  localStorage.setItem(PLAYER_ID_KEY, PLAYER_ID);
+}
+
+// If signed in, prefer a stable namespaced supabase id
+async function maybeUpgradePlayerIdToUser(){
+  if (!supabase) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const uid = 'u_' + session.user.id;
+      if (PLAYER_ID !== uid) {
+        PLAYER_ID = uid;
+        localStorage.setItem(PLAYER_ID_KEY, uid);
+      }
+    }
+  } catch {}
+}
+await maybeUpgradePlayerIdToUser();
+
+// ---- Auth header helper (Supabase if signed-in, else X-Player-Id) ----
+async function getAuthHeader() {
+  try {
+    if (supabase?.auth) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return { Authorization: `Bearer ${session.access_token}` };
+      }
+    }
+  } catch {}
+  return { 'X-Player-Id': PLAYER_ID };
+}
+
+// Core fetch with correct headers
 async function jfetch(path, options = {}) {
   const url = `${BASE}${path}`;
-  const r = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'X-Player-Id': PLAYER_ID,
-      ...(options.headers || {})
-    },
-    ...options,
-  });
+  const authHeader = await getAuthHeader();
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...authHeader,
+    ...(options.headers || {})
+  };
+  const r = await fetch(url, { headers, ...options });
   if (!r.ok) {
     let msg = `${options.method || 'GET'} ${url} ${r.status}`;
     try { const j = await r.json(); if (j && j.error) msg = j.error; } catch {}
@@ -38,16 +82,11 @@ async function jfetch(path, options = {}) {
 // ===== tiny DOM helpers =====
 const $  = (sel, root=document) => root.querySelector(sel);
 const el = (tag, className) => { const n = document.createElement(tag); if (className) n.className = className; return n; };
-function uuid4(){
-  return (crypto.randomUUID && crypto.randomUUID()) ||
-    ([1e7]+-1e3+-4e3+-8e3+-1e11)
-      .replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16));
-}
+function uuid4(){ return makeUuid(); }
 
 // ===== state / refs =====
 let packs   = [];
-let inv     = { balance:{ COIN: 999 }, items: [] };  // normalized shape
+let inv     = { balance:{ COIN: 999 }, items: [] };
 let opening = null; // { openingId, results:[...] }
 
 const balanceEl = $('#balance');
@@ -98,13 +137,11 @@ function cardFrontSrc(_item){
   return '/assets/card-front.png';
 }
 
-// Normalize any inventory response shape to {balance, items}
+// Normalize any inventory response to {balance, items}
 function normalizeInventory(x){
-  // /api/collection/add returns { inventory: { balance, items } }
-  if (x && x.inventory) return x.inventory;
-  // /api/inventory currently returns { balance, items, inv }
-  if (x && x.inv) return x.inv;
-  return x || { balance:{COIN:0}, items:[] };
+  if (x && x.inventory) return x.inventory; // /collection/add
+  if (x && (x.balance || x.items)) return x;
+  return { balance:{COIN:0}, items:[] };
 }
 
 // ===== render meta =====
@@ -116,13 +153,11 @@ function renderMeta(){
 
 // ===== STACK render =====
 function showStack(items){
-  // hide pack while stack shows
   packImg.hidden = true;
   trayEl.hidden  = true;
   stackEl.hidden = false;
   stackEl.replaceChildren();
 
-  // append in order; the last appended sits on top visually
   items.forEach((it) => {
     const btn = el('button', 'stack-card');
     const img = el('img', 'card-img');
@@ -141,11 +176,8 @@ function showStack(items){
 }
 
 function onRevealTop(btn){
-  // Only the top-most card (last child) can be revealed
   if (btn !== stackEl.lastElementChild) return;
-
   stackEl.removeChild(btn);
-
   if (!stackEl.children.length) {
     showTray(opening.results);
   }
@@ -172,7 +204,6 @@ function showTray(items){
     trayEl.appendChild(btn);
   });
 
-  // bring back CTA as "Add to collection"
   cta.textContent = 'Add to collection';
   cta.hidden = false;
   cta.disabled = false;
@@ -180,24 +211,21 @@ function showTray(items){
 }
 
 async function onCollectClick(){
-  if (!overlay.hidden) return;   // ignore while preview is open
+  if (!overlay.hidden) return;
   cta.disabled = true;
   cta.textContent = 'Adding…';
   try{
-    // Send the 5 item ids we just revealed
     const itemIds = (opening?.results || []).map(it => it.itemId);
     const res = await jfetch('/api/collection/add', {
       method: 'POST',
       body: JSON.stringify({ itemIds }),
     });
 
-    // Normalize + update local balances/items
     if (res) {
       inv = normalizeInventory(res);
       renderMeta();
     }
 
-    // reset UI back to idle
     opening = null;
     stackEl.hidden = true;
     trayEl.hidden  = true;
@@ -231,18 +259,51 @@ function closeOverlay(){
 }
 overlay.addEventListener('click', closeOverlay);
 
-// ===== flow =====
+// ===== init / flow =====
+async function requireSignedInOrPrompt() {
+  if (!supabase) return false;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) return true;
+
+  // show a simple email link prompt
+  cta.textContent = 'Sign in to open packs';
+  cta.hidden = false;
+  cta.disabled = false;
+  cta.onclick = async () => {
+    const email = prompt('Enter your email to sign in');
+    if (!email) return;
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (error) return showError(error.message || 'Sign-in failed');
+    alert('Check your email for the magic link, then return here.');
+  };
+  return false;
+}
+
+// Refresh UI if auth state changes after load
+if (supabase?.auth) {
+  supabase.auth.onAuthStateChange((_evt, session) => {
+    if (session?.user) {
+      location.reload(); // simplest: reload into an authenticated session
+    }
+  });
+}
+
 async function init(){
   try{
-    const [p, i] = await Promise.all([
-      jfetch('/api/packs'),
-      jfetch('/api/inventory')
-    ]);
+    const packsResp = await jfetch('/api/packs'); // public
+    packs = packsResp.packs || [];
 
-    packs = p.packs || [];
-    inv   = normalizeInventory(i);
+    // If you want to *require* sign-in, uncomment the next 3 lines:
+    // const ok = await requireSignedInOrPrompt();
+    // if (!ok) return;
+
+    const invResp = await jfetch('/api/inventory'); // works signed or anon
+    inv   = normalizeInventory(invResp);
     renderMeta();
 
+    cta.textContent = 'Open Pack';
+    cta.hidden = false;
+    cta.disabled = false;
     cta.addEventListener('click', onOpenClick, { once:true });
   } catch(e){
     showError(String(e.message || e));
@@ -254,11 +315,9 @@ async function onOpenClick(){
     const pack = packs[0];
     if (!pack) return;
 
-    // Hide CTA while revealing
     cta.hidden = true;
     cta.disabled = true;
 
-    // Hide pack + tray before showing stack
     packImg.hidden = true;
     trayEl.hidden  = true;
 
@@ -267,19 +326,15 @@ async function onOpenClick(){
       body: JSON.stringify({ packId: pack.id, idempotencyKey: uuid4() })
     });
 
-    // keep openingId if you want later; pad to 5 to be safe
     opening = { ...res, results: padToFive(res.results || []) };
 
-    // refresh visible balance (server may have charged pack + dupe credit)
     try {
       const fresh = await jfetch('/api/inventory');
       inv = normalizeInventory(fresh);
       renderMeta();
     } catch {}
 
-    // show stack; CTA stays hidden until we show tray
     showStack(opening.results);
-
   } catch(e){
     showError(String(e.message || e));
     cta.hidden = false;

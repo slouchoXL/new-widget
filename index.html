@@ -7,27 +7,32 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* keep the iframe/page from side-scrolling */
     html, body { overflow-x: hidden; }
   </style>
 
+  <!-- Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Supabase project config -->
   <script>
-    // Define the API base BEFORE app.js so app.js can read it.
+    window.__SUPABASE_URL = 'https://srdwkfjterotzjwzoauj.supabase.co';
+    window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZHdrZmp0ZXJvdHpqd3pvYXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjU5NTksImV4cCI6MjA3MTQ0MTk1OX0.c0mJbQsfJMmqLiulXdZfWscd7J507buzRXkd700ymAQ';
+  </script>
+
+  <!-- Backend base (define BEFORE app.js) -->
+  <script>
     (function () {
       const params = new URLSearchParams(location.search);
-      // Prefer ?api=...; otherwise default to your backend origin (NO /api here)
       let apiBase = params.get('api') || 'https://backend-o9ot.onrender.com';
-
-      // Normalize: remove trailing slashes and a trailing "/api" if provided.
       apiBase = String(apiBase || '').trim()
         .replace(/\/+$/,'')
         .replace(/\/api$/i, '');
-
-      // Expose for app.js
-      window.__PACKS_API_BASE = apiBase;
-      // e.g. "https://backend-o9ot.onrender.com"
+      window.__PACKS_API_BASE = apiBase; // e.g. "https://backend-o9ot.onrender.com"
     })();
   </script>
+
+  <!-- Your app (module so we can use top-level await) -->
+  <script type="module" src="app.js"></script>
 </head>
 <body>
   <div id="app" class="widget" aria-live="polite">
@@ -61,9 +66,7 @@
     <div id="error" class="error" hidden></div>
   </div>
 
-  <!-- Load app AFTER we’ve set window.__PACKS_API_BASE -->
-  <script type="module" src="app.js"></script>
-
+  <!-- Resize notifier for parent iframe (optional) -->
   <script>
     (function () {
       function postHeight(){
