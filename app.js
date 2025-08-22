@@ -5,16 +5,8 @@ if (typeof window !== 'undefined' && window.__PACKS_API_BASE) {
 }
 BASE = BASE.replace(/\/+$/, ''); // trim trailing slashes
 
-// ===== Supabase client (CDN) ===========================================
-if (!window.supabase) {
-  console.error('[supabase] CDN script missing. Add it before app.js:\n' +
-    '<script src="https://unpkg.com/@supabase/supabase-js@2"></script>');
-}
-const SUPABASE_URL = window.__SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY || '';
-const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+// ===== Supabase client (REUSE the one created in index.html) ===========
+const supa = window.supa || null; // do NOT create another client here
 
 // ===== player id (anon fallback preserved for testing) =================
 const PLAYER_ID_KEY = 'packs:playerId';
@@ -33,9 +25,9 @@ if (!PLAYER_ID) {
 
 // If signed in, prefer a stable namespaced supabase id
 async function maybeUpgradePlayerIdToUser(){
-  if (!supabase) return;
+  if (!supa) return;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supa.auth.getSession();
     if (session?.user?.id) {
       const uid = 'u_' + session.user.id;
       if (PLAYER_ID !== uid) {
@@ -50,8 +42,8 @@ await maybeUpgradePlayerIdToUser();
 // ---- Auth header helper (Supabase if signed-in, else X-Player-Id) ----
 async function getAuthHeader() {
   try {
-    if (supabase?.auth) {
-      const { data: { session } } = await supabase.auth.getSession();
+    if (supa?.auth) {
+      const { data: { session } } = await supa.auth.getSession();
       if (session?.access_token) {
         return { Authorization: `Bearer ${session.access_token}` };
       }
@@ -140,7 +132,7 @@ function cardFrontSrc(_item){
 // Normalize any inventory response to {balance, items}
 function normalizeInventory(x){
   if (x && x.inventory) return x.inventory; // /collection/add
-  if (x && (x.balance || x.items)) return x;
+  if (x && (x.balance || x.items)) return x; // /inventory
   return { balance:{COIN:0}, items:[] };
 }
 
@@ -261,8 +253,8 @@ overlay.addEventListener('click', closeOverlay);
 
 // ===== init / flow =====
 async function requireSignedInOrPrompt() {
-  if (!supabase) return false;
-  const { data: { session } } = await supabase.auth.getSession();
+  if (!supa) return false;
+  const { data: { session } } = await supa.auth.getSession();
   if (session?.user) return true;
 
   // show a simple email link prompt
@@ -272,7 +264,7 @@ async function requireSignedInOrPrompt() {
   cta.onclick = async () => {
     const email = prompt('Enter your email to sign in');
     if (!email) return;
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    const { error } = await supa.auth.signInWithOtp({ email });
     if (error) return showError(error.message || 'Sign-in failed');
     alert('Check your email for the magic link, then return here.');
   };
@@ -280,8 +272,8 @@ async function requireSignedInOrPrompt() {
 }
 
 // Refresh UI if auth state changes after load
-if (supabase?.auth) {
-  supabase.auth.onAuthStateChange((_evt, session) => {
+if (supa?.auth) {
+  supa.auth.onAuthStateChange((_evt, session) => {
     if (session?.user) {
       location.reload(); // simplest: reload into an authenticated session
     }
@@ -293,11 +285,11 @@ async function init(){
     const packsResp = await jfetch('/api/packs'); // public
     packs = packsResp.packs || [];
 
-    // If you want to *require* sign-in, uncomment the next 3 lines:
+    // If you want to *require* sign-in, uncomment:
     // const ok = await requireSignedInOrPrompt();
     // if (!ok) return;
 
-    const invResp = await jfetch('/api/inventory'); // works signed or anon
+    const invResp = await jfetch('/api/inventory'); // works signed or anon (header differs)
     inv   = normalizeInventory(invResp);
     renderMeta();
 
