@@ -16,6 +16,7 @@
 
   <!-- Supabase project config: set URL & anon key on window -->
   <script>
+    // TODO: these are safe to expose on the client
     window.__SUPABASE_URL = 'https://srdwkfjterotzjwzoauj.supabase.co';
     window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZHdrZmp0ZXJvdHpqd3pvYXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjU5NTksImV4cCI6MjA3MTQ0MTk1OX0.c0mJbQsfJMmqLiulXdZfWscd7J507buzRXkd700ymAQ';
   </script>
@@ -43,26 +44,57 @@
       );
     }
   </script>
+
+  <!-- Handle magic-link returns (hash with access_token), then clean URL -->
+  <script>
+    (async function () {
+      try {
+        if (window.supa && location.hash.includes('access_token')) {
+          await window.supa.auth.getSessionFromUrl({ storeSession: true });
+          // strip the hash so we don’t keep reprocessing it
+          history.replaceState({}, '', location.pathname + location.search);
+        }
+      } catch (e) {
+        console.warn('[supabase] getSessionFromUrl failed:', e);
+      }
+    })();
+  </script>
 </head>
 <body>
   <!-- Simple auth UI (must be in BODY, after client is created) -->
   <div id="auth" style="margin: 12px 12px 0; display:flex; gap:8px; align-items:center;">
-    <input type="email" id="emailInput" placeholder="Enter email" />
+    <input type="email" id="emailInput" placeholder="Enter email" autocomplete="email" />
     <button id="loginBtn">Send Magic Link</button>
     <button id="logoutBtn" hidden>Log out</button>
   </div>
 
   <script>
     (function () {
+      // Guard in case this block is ever included twice
+      if (window.__AUTH_WIRED__) return;
+      window.__AUTH_WIRED__ = true;
+
       const emailInput = document.getElementById('emailInput');
       const loginBtn   = document.getElementById('loginBtn');
       const logoutBtn  = document.getElementById('logoutBtn');
+
+      function updateButtons(session){
+        const signedIn = !!session?.user;
+        loginBtn.hidden  = signedIn;
+        logoutBtn.hidden = !signedIn;
+      }
 
       loginBtn.addEventListener('click', async () => {
         const email = (emailInput.value || '').trim();
         if (!email) return alert('Enter your email');
         if (!window.supa?.auth) return alert('Auth not initialized');
-        const { error } = await window.supa.auth.signInWithOtp({ email });
+
+        // Ensure the magic link redirects right back to this page
+        const emailRedirectTo = `${location.origin}${location.pathname}`;
+        const { error } = await window.supa.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo }
+        });
         if (error) alert(error.message);
         else alert('Check your email for the magic link!');
       });
@@ -70,22 +102,14 @@
       logoutBtn.addEventListener('click', async () => {
         if (!window.supa?.auth) return;
         await window.supa.auth.signOut();
+        updateButtons(null);
         alert('Logged out');
       });
 
       if (window.supa?.auth) {
-        window.supa.auth.onAuthStateChange((event, session) => {
-          console.log('[auth event]', event, session);
-          const signedIn = !!session?.user;
-          loginBtn.hidden  = signedIn;
-          logoutBtn.hidden = !signedIn;
-        });
-        // Initialize visibility on first load
-        window.supa.auth.getSession().then(({ data: { session } }) => {
-          const signedIn = !!session?.user;
-          loginBtn.hidden  = signedIn;
-          logoutBtn.hidden = !signedIn;
-        });
+        // Initial state + reactive updates
+        window.supa.auth.getSession().then(({ data: { session } }) => updateButtons(session));
+        window.supa.auth.onAuthStateChange((_event, session) => updateButtons(session));
       }
     })();
   </script>
