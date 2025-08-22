@@ -272,14 +272,37 @@ async function requireSignedInOrPrompt() {
 }
 
 // Refresh UI if auth state changes after load
+// Refresh UI if auth state changes after load (no page reloads)
 if (supa?.auth) {
-  supa.auth.onAuthStateChange((_evt, session) => {
-    if (session?.user) {
-      location.reload(); // simplest: reload into an authenticated session
+  const { data: { subscription } } = supa.auth.onAuthStateChange(async (event, session) => {
+    // Only act on actual sign-in/sign-out; ignore token refreshes etc.
+    if (event === 'SIGNED_IN' && session?.user) {
+      // Upgrade PLAYER_ID to the real user id and refresh visible meta
+      await maybeUpgradePlayerIdToUser();
+      try {
+        const fresh = await jfetch('/api/inventory');
+        inv = normalizeInventory(fresh);
+        renderMeta();
+      } catch {}
+      // CTA stays as-is; user can now open packs with their real account
+    } else if (event === 'SIGNED_OUT') {
+      // Fall back to anon id (keep whatever was in localStorage)
+      let anon = localStorage.getItem(PLAYER_ID_KEY);
+      if (!anon) {
+        anon = makeUuid();
+        localStorage.setItem(PLAYER_ID_KEY, anon);
+      }
+      // Update the in-memory PLAYER_ID so future calls use anon again
+      PLAYER_ID = anon;
+      try {
+        const fresh = await jfetch('/api/inventory');
+        inv = normalizeInventory(fresh);
+        renderMeta();
+      } catch {}
     }
   });
+  // (optional) store `subscription` if you plan to unsubscribe later
 }
-
 async function init(){
   try{
     const packsResp = await jfetch('/api/packs'); // public
